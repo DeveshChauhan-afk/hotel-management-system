@@ -40,14 +40,14 @@ class Billing:
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT b.booking_id, b.room_id, g.name, r.room_type, b.check_in
+            SELECT b.booking_id, b.room_id, g.name, r.room_type, b.check_in_date
             FROM bookings b
             JOIN guests g ON b.guest_id = g.guest_id
             JOIN rooms r ON b.room_id = r.room_id
-            WHERE b.check_out IS NULL
+            WHERE b.check_out_date IS NULL
         """)
-        for booking_id, room_id, name, room_type, check_in in cursor.fetchall():
-            self.tree.insert('', 'end', values=(booking_id, room_id, name, room_type, check_in))
+        for booking_id, room_id, name, room_type, check_in_date in cursor.fetchall():
+            self.tree.insert('', 'end', values=(booking_id, room_id, name, room_type, check_in_date))
         conn.close()
 
     def checkout_booking(self):
@@ -57,12 +57,12 @@ class Billing:
             return
 
         values = self.tree.item(selected[0])["values"]
-        booking_id, room_id, guest_name, room_type, check_in = values
+        booking_id, room_id, guest_name, room_type, check_in_date = values
 
-        if isinstance(check_in, str):
-            check_in = datetime.strptime(check_in, "%Y-%m-%d").date()
+        if isinstance(check_in_date, str):
+            check_in_date = datetime.strptime(check_in_date, "%Y-%m-%d").date()
         today = date.today()
-        days = (today - check_in).days or 1
+        days = (today - check_in_date).days or 1
 
         amount = days * ROOM_PRICES.get(room_type, 1000)
 
@@ -74,7 +74,7 @@ class Billing:
         cursor = conn.cursor()
 
         # Update booking with check-out
-        cursor.execute("UPDATE bookings SET check_out=%s WHERE booking_id=%s", (today, booking_id))
+        cursor.execute("UPDATE bookings SET check_out_date=%s WHERE booking_id=%s", (today, booking_id))
 
         # Insert billing
         cursor.execute("INSERT INTO bills (booking_id, amount, billing_date) VALUES (%s, %s, %s)",

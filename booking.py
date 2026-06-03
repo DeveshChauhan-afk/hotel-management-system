@@ -91,14 +91,14 @@ class BookingSystem:
         result = cursor.fetchone()
         print("DEBUG: Room status and cleaned value:", result)
 
-        if not result or result[0] != 'Available' or int(result[1]) != 1:
+        if not result or result[0] != 'available' or int(result[1]) != 1:
             messagebox.showerror("Error", "Selected room is not available or cleaned")
             conn.close()
             return
 
         # Insert booking
         cursor.execute(
-            "INSERT INTO bookings (guest_id, room_id, check_in, check_out) VALUES (%s, %s, %s, NULL)",
+            "INSERT INTO bookings (guest_id, room_id, check_in_date, check_out_date) VALUES (%s, %s, %s, NULL)",
             (guest_id, room_id, date.today())
         )
 

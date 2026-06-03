@@ -7,7 +7,7 @@ def generate_receipt(booking_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT g.name, g.phone, r.room_type, b.check_in, b.check_out, bi.amount
+        SELECT g.name, g.phone, r.room_type, b.check_in_date, b.check_out_date, bi.amount
         FROM bookings b
         JOIN guests g ON b.guest_id = g.guest_id
         JOIN rooms r ON b.room_id = r.room_id
@@ -21,7 +21,7 @@ def generate_receipt(booking_id):
         print("No data found for receipt.")
         return
 
-    name, phone, room_type, check_in, check_out, amount = data
+    name, phone, room_type, check_in_date, check_out_date, amount = data
 
     filename = f"receipt_{booking_id}.pdf"
     c = canvas.Canvas(filename, pagesize=letter)
@@ -37,8 +37,8 @@ def generate_receipt(booking_id):
         f"Guest Name: {name}",
         f"Phone: {phone}",
         f"Room Type: {room_type}",
-        f"Check-in Date: {check_in}",
-        f"Check-out Date: {check_out}",
+        f"Check-in Date: {check_in_date}",
+        f"Check-out Date: {check_out_date}",
         f"Total Amount: ₹{amount}",
     ]
 
