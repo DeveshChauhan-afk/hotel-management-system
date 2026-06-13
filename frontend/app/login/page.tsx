@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import api from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
+  const router = useRouter();
   // ADD THIS HERE 👇
   const handleLogin = async () => {
 
@@ -23,7 +24,7 @@ export default function LoginPage() {
         response.data.token
       );
 
-      alert("Login Successful");
+      router.push("/dashboard");
 
       localStorage.setItem(
         "token",
@@ -40,7 +41,7 @@ alert("Login Successful");
 
     }
   };
-
+  
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-100">
 

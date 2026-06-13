@@ -3,6 +3,7 @@ from config import Config
 from app.extensions import db, jwt
 from flask_cors import CORS
 from app.extensions import db, jwt, bcrypt
+from app.routes.dashboard_routes import dashboard_bp
 def create_app():
 
     app = Flask(__name__)
@@ -27,5 +28,6 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(booking_bp)
     app.register_blueprint(room_bp)
+    app.register_blueprint(dashboard_bp)
 
     return app
