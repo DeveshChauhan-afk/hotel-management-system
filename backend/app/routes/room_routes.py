@@ -11,7 +11,7 @@ room_bp = Blueprint("rooms", __name__)
 
 @room_bp.route("/rooms", methods=["GET"])
 @jwt_required()
-@role_required("admin")
+@role_required("admin", "receptionist")
 def get_rooms():
 
     current_user = get_jwt_identity()
@@ -30,6 +30,8 @@ def get_rooms():
 
 
 @room_bp.route("/auto-assign-room", methods=["POST"])
+@jwt_required()
+@role_required("admin", "receptionist")
 def assign_room():
 
     data = request.get_json()

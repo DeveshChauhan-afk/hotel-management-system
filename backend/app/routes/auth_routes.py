@@ -1,10 +1,13 @@
+import os
 from flask import Blueprint, request, jsonify
 
+from app.extensions import limiter
 from app.services.auth_service import login_user
 
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/login", methods=["POST"])
+@limiter.limit(lambda: os.getenv("LOGIN_RATE_LIMIT", "5 per minute"))
 def login():
 
     data = request.get_json()

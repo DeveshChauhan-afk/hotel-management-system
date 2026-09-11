@@ -9,16 +9,10 @@ def login_user(username, password):
         username=username
     ).first()
 
-    if not user:
+    if not user or not check_password_hash(user.password, password):
 
         return {
-            "error": "Invalid username"
-        }, 401
-
-    if not check_password_hash(user.password, password):
-
-        return {
-            "error": "Invalid password"
+            "error": "Invalid username or password"
         }, 401
 
     access_token = create_access_token(

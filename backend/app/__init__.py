@@ -1,8 +1,7 @@
 from flask import Flask
 from config import Config
-from app.extensions import db, jwt
 from flask_cors import CORS
-from app.extensions import db, jwt, bcrypt
+from app.extensions import db, jwt, bcrypt, limiter
 from app.routes.dashboard_routes import dashboard_bp
 def create_app():
 
@@ -15,6 +14,7 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
+    limiter.init_app(app)
 
     from app.models.room_model import Room
 
