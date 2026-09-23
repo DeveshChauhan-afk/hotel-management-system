@@ -7,3 +7,4 @@ PyMySQL==1.2.0
 cryptography==50.0.1
 python-dotenv==1.2.3
 Flask-Limiter==4.1.1
+Flask-Migrate==4.1.0
