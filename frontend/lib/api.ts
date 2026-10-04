@@ -54,3 +54,5 @@ api.interceptors.response.use(
 export default api;
 export * from "./roomTypesApi";
 export * from "./roomsApi";
+export * from "./guestsApi";
+export * from "./bookingsApi";
