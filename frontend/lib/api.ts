@@ -57,3 +57,4 @@ export * from "./roomsApi";
 export * from "./guestsApi";
 export * from "./bookingsApi";
 export * from "./billingApi";
+export * from "./housekeepingApi";
