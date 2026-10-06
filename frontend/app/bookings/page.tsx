@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppShell from "@/components/AppShell";
+import CheckoutModal from "@/components/CheckoutModal";
 import {
   getBookings,
   createBooking,
@@ -34,6 +36,8 @@ import {
   DollarSign,
   AlertTriangle,
   UserPlus,
+  Receipt,
+  LogOut,
 } from "lucide-react";
 
 const BOOKING_STATUS_CONFIG: Record<
@@ -97,6 +101,10 @@ function BookingsContent() {
   // Details Modal
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Checkout Modal
+  const [bookingToCheckout, setBookingToCheckout] = useState<Booking | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // New Booking Modal
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -720,13 +728,36 @@ function BookingsContent() {
                             className="py-4 px-4 sm:px-6 text-right whitespace-nowrap"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <button
-                              onClick={() => handleOpenDetails(b)}
-                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                              title="View Booking Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Link
+                                href={`/billing?booking_id=${b.booking_id}`}
+                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                title="View Folio / Billing"
+                              >
+                                <Receipt className="w-4 h-4" />
+                              </Link>
+
+                              {(b.status === "confirmed" || b.status === "checked_in") && (
+                                <button
+                                  onClick={() => {
+                                    setBookingToCheckout(b);
+                                    setIsCheckoutOpen(true);
+                                  }}
+                                  className="p-1.5 text-gray-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                  title="Checkout Guest"
+                                >
+                                  <LogOut className="w-4 h-4" />
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => handleOpenDetails(b)}
+                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                                title="View Booking Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -900,7 +931,31 @@ function BookingsContent() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-end pt-6 border-t border-gray-200 mt-6">
+                  <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-6">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/billing?booking_id=${selectedBooking.booking_id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>View Folio</span>
+                      </Link>
+
+                      {(selectedBooking.status === "confirmed" || selectedBooking.status === "checked_in") && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBookingToCheckout(selectedBooking);
+                            setIsCheckoutOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Checkout Guest</span>
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       onClick={() => setIsDetailModalOpen(false)}
                       className="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
@@ -911,6 +966,24 @@ function BookingsContent() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* CHECKOUT MODAL */}
+          {isCheckoutOpen && (
+            <CheckoutModal
+              isOpen={isCheckoutOpen}
+              onClose={() => {
+                setIsCheckoutOpen(false);
+                setBookingToCheckout(null);
+              }}
+              booking={bookingToCheckout}
+              guest={bookingToCheckout ? guestMap.get(bookingToCheckout.guest_id) || null : null}
+              room={bookingToCheckout?.room_id ? roomMap.get(bookingToCheckout.room_id) || null : null}
+              onSuccess={() => {
+                loadData(true);
+                setIsDetailModalOpen(false);
+              }}
+            />
           )}
 
           {/* CREATE BOOKING WORKFLOW MODAL */}
