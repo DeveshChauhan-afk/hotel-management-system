@@ -58,3 +58,4 @@ export * from "./guestsApi";
 export * from "./bookingsApi";
 export * from "./billingApi";
 export * from "./housekeepingApi";
+export * from "./maintenanceApi";
