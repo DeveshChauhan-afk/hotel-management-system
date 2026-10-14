@@ -69,13 +69,13 @@ const NAV_ITEMS: NavItem[] = [
     name: "Housekeeping",
     href: "/housekeeping",
     icon: Sparkles,
-    roles: ["admin", "manager", "housekeeper"],
+    roles: ["admin", "manager", "receptionist", "housekeeper"],
   },
   {
     name: "Maintenance",
     href: "/maintenance",
     icon: Wrench,
-    roles: ["admin", "manager", "receptionist", "housekeeper", "maintenance"],
+    roles: ["admin", "manager", "receptionist", "maintenance"],
   },
 ];
 
