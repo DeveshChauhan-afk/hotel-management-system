@@ -4,11 +4,20 @@ from config import Config
 from flask_cors import CORS
 from app.extensions import db, jwt, bcrypt, limiter, migrate
 from app.routes.dashboard_routes import dashboard_bp
-def create_app():
+
+
+def create_app(config_class=None):
+    if config_class is None:
+        config_class = Config
 
     app = Flask(__name__)
 
-    app.config.from_object(Config)
+    app.config.from_object(config_class)
+
+    # Fail-closed guard: if in testing mode, validate database URI before db.init_app
+    if app.config.get("TESTING"):
+        from config import validate_test_database_uri
+        validate_test_database_uri(app.config.get("SQLALCHEMY_DATABASE_URI"))
 
     CORS(app)
 
