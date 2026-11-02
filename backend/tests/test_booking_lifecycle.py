@@ -504,6 +504,175 @@ class BookingLifecycleTestCase(unittest.TestCase):
             room_check = db.session.get(Room, self.room_id)
             self.assertEqual(room_check.operational_status, "under_maintenance")
 
+    # -------------------------------------------------------------------------
+    # 15. Successful checkout after check-in with timestamp and room verification
+    # -------------------------------------------------------------------------
+    def test_15_successful_checkout_lifecycle_and_timestamps(self):
+        """Verify checkout succeeds from checked_in, preserves actual_check_in, records actual_check_out, and marks room dirty."""
+        # 1. Create booking
+        res = self.client.post(
+            "/bookings",
+            headers=self.receptionist_headers,
+            json={"guest_id": self.guest_id, "room_id": self.room_id}
+        )
+        self.assertEqual(res.status_code, 201)
+        booking_id = res.get_json()["booking"]["booking_id"]
+
+        # 2. Check in
+        checkin_res = self.client.post(f"/bookings/{booking_id}/check-in", headers=self.receptionist_headers)
+        self.assertEqual(checkin_res.status_code, 200)
+        original_checkin = checkin_res.get_json()["booking"]["actual_check_in"]
+        self.assertIsNotNone(original_checkin)
+
+        # 3. Check out
+        checkout_res = self.client.post(f"/bookings/{booking_id}/checkout", headers=self.receptionist_headers)
+        self.assertEqual(checkout_res.status_code, 200)
+        data = checkout_res.get_json()
+        self.assertEqual(data.get("message"), "Checkout completed successfully")
+
+        # Verify booking timestamps and state
+        b = data.get("booking")
+        self.assertEqual(b["status"], "checked_out")
+        self.assertEqual(b["actual_check_in"], original_checkin, "actual_check_in must remain exactly as recorded at check-in")
+        self.assertIsNotNone(b["actual_check_out"], "actual_check_out must be recorded")
+
+        # Verify room status and cleanliness
+        r = data.get("room")
+        self.assertEqual(r["cleanliness_status"], "dirty", "Room must be marked dirty after checkout")
+        self.assertEqual(r["operational_status"], "available")
+        self.assertFalse(r["is_available"], "Dirty room must not be available for sale")
+
+        # Verify bill generated
+        bill = data.get("bill")
+        self.assertIsNotNone(bill)
+        self.assertEqual(bill["booking_id"], booking_id)
+        self.assertEqual(bill["status"], "issued")
+
+    # -------------------------------------------------------------------------
+    # 16. Checkout rejected for confirmed booking
+    # -------------------------------------------------------------------------
+    def test_16_checkout_rejected_for_confirmed_booking(self):
+        """Verify checkout is rejected for a booking that has not yet checked in."""
+        res = self.client.post(
+            "/bookings",
+            headers=self.receptionist_headers,
+            json={"guest_id": self.guest_id, "room_id": self.room_id}
+        )
+        booking_id = res.get_json()["booking"]["booking_id"]
+
+        # Attempt direct checkout without check-in
+        co_res = self.client.post(f"/bookings/{booking_id}/checkout", headers=self.receptionist_headers)
+        self.assertEqual(co_res.status_code, 400)
+        error_msg = co_res.get_json().get("error", "")
+        self.assertIn("must be checked in", error_msg)
+
+        # Room must not be dirtied
+        with self.app.app_context():
+            room = db.session.get(Room, self.room_id)
+            self.assertEqual(room.cleanliness_status, "clean")
+
+    # -------------------------------------------------------------------------
+    # 17. Checkout rejected for pending booking
+    # -------------------------------------------------------------------------
+    def test_17_checkout_rejected_for_pending_booking(self):
+        """Verify checkout is rejected for a pending booking."""
+        with self.app.app_context():
+            b = Booking(
+                guest_id=self.guest_id,
+                room_id=self.room_id,
+                status="pending",
+                check_in_date=date.today(),
+                check_out_date=date.today() + timedelta(days=1),
+            )
+            db.session.add(b)
+            db.session.commit()
+            pending_id = b.booking_id
+
+        co_res = self.client.post(f"/bookings/{pending_id}/checkout", headers=self.receptionist_headers)
+        self.assertEqual(co_res.status_code, 400)
+        self.assertIn("must be checked in", co_res.get_json().get("error", ""))
+
+    # -------------------------------------------------------------------------
+    # 18. Checkout rejected for cancelled booking
+    # -------------------------------------------------------------------------
+    def test_18_checkout_rejected_for_cancelled_booking(self):
+        """Verify checkout is rejected for a cancelled booking."""
+        res = self.client.post(
+            "/bookings",
+            headers=self.receptionist_headers,
+            json={"guest_id": self.guest_id, "room_id": self.room_id}
+        )
+        booking_id = res.get_json()["booking"]["booking_id"]
+
+        # Cancel the booking
+        self.client.post(f"/bookings/{booking_id}/cancel", headers=self.receptionist_headers)
+
+        # Attempt checkout
+        co_res = self.client.post(f"/bookings/{booking_id}/checkout", headers=self.receptionist_headers)
+        self.assertEqual(co_res.status_code, 400)
+        self.assertIn("cancelled", co_res.get_json().get("error", ""))
+
+    # -------------------------------------------------------------------------
+    # 19. Repeated checkout rejected
+    # -------------------------------------------------------------------------
+    def test_19_repeated_checkout_rejected(self):
+        """Verify repeated checkout on an already checked_out booking returns 400."""
+        res = self.client.post(
+            "/bookings",
+            headers=self.receptionist_headers,
+            json={"guest_id": self.guest_id, "room_id": self.room_id}
+        )
+        booking_id = res.get_json()["booking"]["booking_id"]
+
+        # Check in and check out once
+        self.client.post(f"/bookings/{booking_id}/check-in", headers=self.receptionist_headers)
+        co1 = self.client.post(f"/bookings/{booking_id}/checkout", headers=self.receptionist_headers)
+        self.assertEqual(co1.status_code, 200)
+
+        # Attempt second checkout
+        co2 = self.client.post(f"/bookings/{booking_id}/checkout", headers=self.receptionist_headers)
+        self.assertEqual(co2.status_code, 400)
+        self.assertIn("already checked out", co2.get_json().get("error", ""))
+
+    # -------------------------------------------------------------------------
+    # 20. Existing bill is reused without duplication
+    # -------------------------------------------------------------------------
+    def test_20_existing_bill_is_reused_without_duplication(self):
+        """Verify checkout reuses an existing bill and does not generate duplicate bill records."""
+        res = self.client.post(
+            "/bookings",
+            headers=self.receptionist_headers,
+            json={"guest_id": self.guest_id, "room_id": self.room_id}
+        )
+        booking_id = res.get_json()["booking"]["booking_id"]
+
+        # Pre-generate bill with specific tax
+        bill_res = self.client.post(
+            f"/bookings/{booking_id}/bill",
+            headers=self.receptionist_headers,
+            json={"tax_amount": "25.00"}
+        )
+        self.assertEqual(bill_res.status_code, 201)
+        existing_bill = bill_res.get_json()["bill"]
+        existing_bill_id = existing_bill["bill_id"]
+        existing_inv = existing_bill["invoice_number"]
+
+        # Check in then check out
+        self.client.post(f"/bookings/{booking_id}/check-in", headers=self.receptionist_headers)
+        co_res = self.client.post(f"/bookings/{booking_id}/checkout", headers=self.receptionist_headers)
+        self.assertEqual(co_res.status_code, 200)
+
+        # Verify reused bill
+        co_bill = co_res.get_json()["bill"]
+        self.assertEqual(co_bill["bill_id"], existing_bill_id)
+        self.assertEqual(co_bill["invoice_number"], existing_inv)
+        self.assertEqual(co_bill["tax_amount"], "25.00")
+
+        # Verify only 1 bill exists in database
+        with self.app.app_context():
+            bill_count = Bill.query.filter_by(booking_id=booking_id).count()
+            self.assertEqual(bill_count, 1)
+
 
 
 if __name__ == "__main__":

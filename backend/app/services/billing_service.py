@@ -153,16 +153,16 @@ def checkout_booking(booking_id):
     if booking.status == "checked_out":
         return {"error": "Booking is already checked out"}, 400
 
-    if booking.status in ("cancelled", "no_show"):
-        return {"error": f"Cannot check out booking with status '{booking.status}'"}, 400
+    if booking.status != "checked_in":
+        return {
+            "error": f"Cannot check out booking with status '{booking.status}'. Booking must be checked in first"
+        }, 400
 
     now = datetime.now(timezone.utc)
 
     # 1. Update Booking state
     booking.status = "checked_out"
     booking.actual_check_out = now
-    if not booking.actual_check_in:
-        booking.actual_check_in = booking.created_at if booking.created_at else now
     booking.updated_at = now
 
     # 2. Update Room state
