@@ -47,9 +47,25 @@ def create_app(config_class=None):
     from app.routes.room_routes import room_bp
     from app.models.user_model import User
     from app.routes.auth_routes import auth_bp
+    from app.routes.room_type_routes import room_type_bp
+    from app.routes.billing_routes import billing_bp
+    from app.routes.guest_routes import guest_bp
+    from app.routes.housekeeping_routes import housekeeping_bp
+    from app.routes.maintenance_routes import maintenance_bp
+    from app.routes.health_routes import health_bp
+    from app.errors import register_error_handlers
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(booking_bp)
     app.register_blueprint(room_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(room_type_bp)
+    app.register_blueprint(billing_bp)
+    app.register_blueprint(guest_bp)
+    app.register_blueprint(housekeeping_bp)
+    app.register_blueprint(maintenance_bp)
+    app.register_blueprint(health_bp)
+
+    register_error_handlers(app)
 
     return app
